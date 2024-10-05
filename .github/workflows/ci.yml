@@ -29,13 +29,32 @@ jobs:
       run: |
         podman build --arch amd64 -f ./Dockerfile -t spendless_banking_sim_backend ./
         podman tag spendless_banking_sim_backend:latest ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
-
     - name: Login to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.SPENDLESS_TOKEN }}
-
-    - name: Push Docker Image using Podman
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    # Alternative using podman if docker/login-action doesn't work:
+    - name: Login to Docker Hub with Podman
       run: |
-        podman push ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
+        printf "%s" "${{ secrets.DOCKER_PASSWORD }}" | podman login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin docker.io
+    
+    # Troubleshooting steps:
+    # 1. Verify secrets exist
+    - name: Check if secrets exist
+      run: |
+        if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+          echo "DOCKER_USERNAME is not set"
+          exit 1
+        fi
+        if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+          echo "DOCKER_PASSWORD is not set"
+          exit 1
+        fi
+    
+    # 2. Debug podman version and status
+    - name: Debug Podman
+      run: |
+        podman --version
+        podman info
