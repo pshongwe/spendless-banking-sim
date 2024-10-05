@@ -12,13 +12,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Install Podman and Docker CLI
+    - name: Install Podman and enable Docker compatibility
       run: |
         . /etc/os-release
         echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
         curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
         sudo apt-get update
-        sudo apt-get -y install podman docker-ce
+        sudo apt-get -y install podman
+        sudo ln -s /usr/bin/podman /usr/bin/docker  # Enable Docker compatibility
 
     - name: Set up Node.js
       uses: actions/setup-node@v2
@@ -31,13 +32,16 @@ jobs:
 
     - name: Build Docker Image using Podman
       run: |
-        podman build --arch amd64 -f ./Dockerfile -t spendless_banking_sim_backend ./
-        podman tag localhost/spendless_banking_sim_backend:latest ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
+        docker build --arch amd64 -f ./Dockerfile -t spendless_banking_sim_backend ./
+        docker tag localhost/spendless_banking_sim_backend:latest ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
 
-    - name: Docker Hub login using Docker CLI
+    - name: Docker Hub login using Environment Variables
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.SPENDLESS_TOKEN }}
       run: |
-        echo ${{ secrets.SPENDLESS_TOKEN }} | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin docker.io
+        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
 
-    - name: Push Docker Image using Podman
+    - name: Push Docker Image using Podman (Docker Compatibility)
       run: |
-        podman push ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
