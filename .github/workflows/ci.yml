@@ -1,60 +1,29 @@
-name: Continuous Integration and Deployment with Podman
+name: Build and Push to DockerHub
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Install Podman
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y podman
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-        cache: 'npm'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Build Docker Image using Podman
-      run: |
-        podman build --arch amd64 -f ./Dockerfile -t spendless_banking_sim_backend ./
-        podman tag spendless_banking_sim_backend:latest ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    # Alternative using podman if docker/login-action doesn't work:
-    - name: Login to Docker Hub with Podman
-      run: |
-        printf "%s" "${{ secrets.DOCKER_PASSWORD }}" | podman login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin docker.io
-    
-    # Troubleshooting steps:
-    # 1. Verify secrets exist
-    - name: Check if secrets exist
-      run: |
-        if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
-          echo "DOCKER_USERNAME is not set"
-          exit 1
-        fi
-        if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
-          echo "DOCKER_PASSWORD is not set"
-          exit 1
-        fi
-    
-    # 2. Debug podman version and status
-    - name: Debug Podman
-      run: |
-        podman --version
-        podman info
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
