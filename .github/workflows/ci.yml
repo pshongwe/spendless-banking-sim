@@ -7,21 +7,18 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
-      id-token: write #This is required for requesting the OIDC JWT Token
-      contents: read #Required when GH token is used to authenticate with private repo
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Install Podman
+    - name: Install Podman and Docker CLI
       run: |
         . /etc/os-release
         echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
         curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
         sudo apt-get update
-        sudo apt-get -y install podman
+        sudo apt-get -y install podman docker-ce
 
     - name: Set up Node.js
       uses: actions/setup-node@v2
@@ -32,15 +29,15 @@ jobs:
       run: |
         npm install
 
-    - name: Build Docker Image
+    - name: Build Docker Image using Podman
       run: |
         podman build --arch amd64 -f ./Dockerfile -t spendless_banking_sim_backend ./
         podman tag localhost/spendless_banking_sim_backend:latest ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
 
-    - name: Login to Docker Hub
+    - name: Docker Hub login using Docker CLI
       run: |
-        echo ${{ secrets.SPENDLESS_TOKEN }} | podman login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin docker.io
+        echo ${{ secrets.SPENDLESS_TOKEN }} | docker login --username ${{ secrets.DOCKER_USERNAME }} --password-stdin docker.io
 
-    - name: Push Docker Image
+    - name: Push Docker Image using Podman
       run: |
         podman push ${{ secrets.DOCKER_USERNAME }}/spendless_banking_sim_backend:latest
