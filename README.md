@@ -1,4 +1,4 @@
-# Investec Programmable Banking Stateful Sandbox
+# Investec Programmable Banking Stateful Sandbox 
 
 A Node.js server to get everyone building and demoing regardless whether you have an account. The sandbox is set up in a way that it provides a single profile. Under the profile you are able to see accounts and cards. It does not require authentication because of the single profile. 
 
