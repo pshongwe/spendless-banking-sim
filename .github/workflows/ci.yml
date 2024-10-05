@@ -1,4 +1,4 @@
-name: Build and Push to DockerHub
+name: Debug DockerHub Login
 
 on:
   push:
@@ -6,17 +6,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-push:
+  debug-and-push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Check for DockerHub Credentials
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "::error::DOCKER_USERNAME is not set in repository secrets"
+            exit 1
+          fi
+          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "::error::DOCKER_PASSWORD is not set in repository secrets"
+            exit 1
+          fi
+          echo "Both DOCKER_USERNAME and DOCKER_PASSWORD secrets are set"
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Rest of your workflow here
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
